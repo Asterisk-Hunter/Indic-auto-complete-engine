@@ -252,10 +252,12 @@ export default function KeyboardPage() {
       return;
     }
 
-    const words = input.trim().split(/\s+/).filter(word => word.length >= 2);
-    
-    if (words.length === 0) {
-      setToast({ message: 'Please enter complete words (at least 2 characters)', type: 'error' });
+    // Save only the currently typed (last) word to personalization
+    const words = input.trim().split(/\s+/).filter(word => word.length > 0);
+    const lastWord = words.length > 0 ? words[words.length - 1] : '';
+
+    if (!lastWord || lastWord.length < 2) {
+      setToast({ message: 'Please place the caret on a complete word (min 2 chars) to save', type: 'error' });
       return;
     }
 
@@ -264,35 +266,23 @@ export default function KeyboardPage() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
-      let successCount = 0;
-      let failCount = 0;
+      const response = await fetch(
+        `${API_BASE}/learn/?user_id=${encodeURIComponent(userId)}&text=${encodeURIComponent(lastWord)}`,
+        { method: 'POST', signal: controller.signal }
+      );
 
-      for (const word of words) {
-        try {
-          const response = await fetch(
-            `${API_BASE}/learn/?user_id=${encodeURIComponent(userId)}&text=${encodeURIComponent(word)}`, 
-            { method: 'POST', signal: controller.signal }
-          );
-          
-          if (response.ok) {
-            successCount++;
-          } else {
-            failCount++;
-          }
-        } catch {
-          failCount++;
-        }
-      }
-      
       clearTimeout(timeoutId);
 
-      if (successCount > 0) {
-        setToast({ 
-          message: `Saved ${successCount} word${successCount > 1 ? 's' : ''} to your dictionary${failCount > 0 ? ` (${failCount} failed)` : ''}`, 
-          type: successCount > failCount ? 'success' : 'error'
-        });
+      if (response.ok) {
+        // Parse returned stats and update dictionary display immediately
+        const data = await response.json();
+        const stats = data.stats || data.statistics || null;
+        if (stats) {
+          setDictionaryData(stats);
+        }
+        setToast({ message: `Saved "${lastWord}" to your dictionary`, type: 'success' });
       } else {
-        setToast({ message: 'Failed to save words to dictionary', type: 'error' });
+        setToast({ message: 'Failed to save to dictionary', type: 'error' });
       }
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {

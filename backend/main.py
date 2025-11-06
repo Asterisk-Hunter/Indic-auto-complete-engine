@@ -43,9 +43,7 @@ async def startup_event():
         file_path = os.path.join(base_dir, path)
         if os.path.exists(file_path):
             n_gram.load_from_file(file_path)
-    phrases_path = os.path.join(base_dir, "datasets", "phrases.txt")
-    if os.path.exists(phrases_path):
-        n_gram.load_phrases(phrases_path)
+    # Phrase dataset deprecated; loading skipped.
     content_filter.load_blocklist()
     for language, path in DATASET_PATHS.items():
         file_path = os.path.join(base_dir, path)
@@ -101,17 +99,21 @@ async def suggest_emoji(word: str = Query(...), top_k: int = Query(3)):
     emojis = emoji_suggester.suggest(word, top_k)
     return {"word": word, "emojis": emojis, "count": len(emojis)}
 
-@app.get("/emoji-phrase/")
-async def suggest_emoji_for_phrase(phrase: str = Query(...), top_k: int = Query(5)):
-    emojis = emoji_suggester.suggest_for_phrase(phrase, top_k)
-    return {"phrase": phrase, "emojis": emojis, "count": len(emojis)}
-
 @app.post("/learn/")
 async def learn_from_user(user_id: str = Query(...), text: str = Query(...)):
     user_model = personalization_manager.get_user(user_id)
     user_model.learn(text)
-    if user_model.total_interactions % 10 == 0:
-        user_model.save_to_file()
+    
+    # Also add custom words to Trie so they appear in autocomplete
+    words = text.lower().split()
+    for word in words:
+        if len(word) >= 2:  # Only add words with 2+ characters
+            if not trie.search(word):  # Only if not already in Trie
+                trie.insert(word, frequency=1)
+                print(f"Added custom word to Trie: {word}")
+    
+    # Persist immediately for project simplicity and predictable behavior
+    user_model.save_to_file()
     return {"status": "success", "user_id": user_id, "stats": user_model.get_stats()}
 
 @app.get("/user-stats/{user_id}")

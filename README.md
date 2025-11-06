@@ -118,7 +118,7 @@ GET /stats/
 **N-Gram Model**
 - Predicts next word based on previous context
 - Trained on language-specific datasets
-- Phrase pattern matching for common expressions
+ 
 
 **Personalization Engine**
 - User-specific vocabulary tracking

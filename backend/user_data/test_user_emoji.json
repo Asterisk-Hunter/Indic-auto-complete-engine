@@ -1,0 +1,13 @@
+{
+  "user_id": "test_user_emoji",
+  "personal_vocab": {
+    "hello": 2,
+    "world": 1
+  },
+  "personal_bigrams": {},
+  "recent_words": [
+    "world",
+    "hello"
+  ],
+  "total_interactions": 3
+}

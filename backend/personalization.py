@@ -75,7 +75,8 @@ class UserModel:
     
     def get_favorite_words(self, top_k: int = 10) -> list:
         
-        return [word for word, _ in self.personal_vocab.most_common(top_k)]
+        # Return list of (word, count) pairs for top-k most common words
+        return self.personal_vocab.most_common(top_k)
     
     def get_stats(self) -> dict:
         
@@ -84,6 +85,7 @@ class UserModel:
             'total_interactions': self.total_interactions,
             'unique_words': len(self.personal_vocab),
             'total_words': sum(self.personal_vocab.values()),
+            # favorite_words as list of [word, count] to match frontend expectations
             'favorite_words': self.get_favorite_words(5)
         }
     
