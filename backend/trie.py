@@ -24,7 +24,6 @@ def insert(word: str, freq: int = 1):
     node.frequency += freq
 
 def load_from_file(path: str):
-    # Loading from file
     count = 0
     with open(path, 'r', encoding='utf-8') as f:
         for line in f:
@@ -35,7 +34,6 @@ def load_from_file(path: str):
             freq = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 1
             insert(word, freq)
             count += 1
-    # Loaded words from file
 
 def _find_node(prefix: str):
     node = root
@@ -69,27 +67,88 @@ def fuzzy_search(prefix: str, max_suggestions: int = 10):
     results = set(starts_with(prefix, max_suggestions))
     letters = [chr(i) for i in range(0x0900, 0x097F)]
 
-    # substitution
     for i in range(len(prefix)):
         for l in letters:
             w = prefix[:i] + l + prefix[i+1:]
             results.update(starts_with(w, max_suggestions))
 
-    # insertion
     for i in range(len(prefix)+1):
         for l in letters:
             w = prefix[:i] + l + prefix[i:]
             results.update(starts_with(w, max_suggestions))
 
-    # deletion
     for i in range(len(prefix)):
         w = prefix[:i] + prefix[i+1:]
         results.update(starts_with(w, max_suggestions))
 
     return list(results)[:max_suggestions]
 
+def levenshtein_distance(s1: str, s2: str) -> int:
+    
+    if len(s1) > len(s2):
+        s1, s2 = s2, s1
+    
+    if len(s1) == 0:
+        return len(s2)
+    
+    previous_row = list(range(len(s2) + 1))
+    
+    for i, char1 in enumerate(s1):
+        current_row = [i + 1]
+        
+        for j, char2 in enumerate(s2):
+            insertion_cost = current_row[j] + 1
+            
+            deletion_cost = previous_row[j + 1] + 1
+            
+            substitution_cost = previous_row[j] + (0 if char1 == char2 else 1)
+            
+            current_row.append(min(insertion_cost, deletion_cost, substitution_cost))
+        
+        previous_row = current_row
+    
+    return previous_row[-1]
+
+
+def spell_check(word: str, max_distance: int = 2, max_results: int = 10) -> list:
+    
+    word = _normalize(word)
+    if not word:
+        return []
+    
+    candidates = []
+    
+    queue = [(root, '')]
+    all_words = []
+    
+    while queue:
+        node, prefix = queue.pop(0)
+        
+        if node.is_word:
+            all_words.append((prefix, node.frequency))
+        
+        for char, child in node.children.items():
+            queue.append((child, prefix + char))
+    
+    for candidate_word, frequency in all_words:
+        distance = levenshtein_distance(word, candidate_word)
+        
+        if distance <= max_distance:
+            candidates.append((candidate_word, distance, frequency))
+    
+    candidates.sort(key=lambda x: (x[1], -x[2]))
+    
+    return [word for word, _, _ in candidates[:max_results]]
+
+
 def autocomplete(prefix: str, max_suggestions: int = 10):
+    
     suggestions = starts_with(prefix, max_suggestions)
+    
     if not suggestions:
         suggestions = fuzzy_search(prefix, max_suggestions)
+    
+    if not suggestions:
+        suggestions = spell_check(prefix, max_distance=2, max_results=max_suggestions)
+    
     return suggestions
