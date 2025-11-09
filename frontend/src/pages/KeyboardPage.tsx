@@ -199,47 +199,53 @@ export default function KeyboardPage() {
     }
 
     const words = input.split(/\s+/).filter(w => w.length > 0);
-    const errors = [];
-
+    
     setIsLoading(true);
+    setToast({ message: `Checking ${words.length} word${words.length > 1 ? 's' : ''}...`, type: 'success' });
+    
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+      const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT * 2); // Double timeout for spell check
 
       const results = await Promise.all(
         words.map(async (word) => {
           try {
             const response = await fetch(
-              `${API_BASE}/spell-check/?word=${encodeURIComponent(word)}&language=${language}`,
+              `${API_BASE}/spell-check/?word=${encodeURIComponent(word)}&max_distance=2`,
               { signal: controller.signal }
             );
             const data = await response.json();
-            return { word, corrections: data.corrections || [] };
+            // Only return as error if word is incorrect (not found in dictionary)
+            if (data.correct === false && data.corrections && data.corrections.length > 0) {
+              return { word, corrections: data.corrections };
+            }
+            return null;
           } catch {
-            return { word, corrections: [] };
+            return null;
           }
         })
       );
       
       clearTimeout(timeoutId);
-      errors.push(...results.filter(r => r.corrections.length > 0));
+      // Filter out null values (correctly spelled words)
+      const errors = results.filter(r => r !== null);
       setSpellErrors(errors);
       
       if (errors.length === 0) {
-        setToast({ message: 'No spelling errors found', type: 'success' });
+        setToast({ message: '✓ No spelling errors found', type: 'success' });
       } else {
         setToast({ message: `Found ${errors.length} spelling error${errors.length > 1 ? 's' : ''}`, type: 'error' });
       }
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        setToast({ message: 'Spell check timed out', type: 'error' });
+        setToast({ message: 'Spell check timed out - try fewer words', type: 'error' });
       } else {
         setToast({ message: 'Spell check failed', type: 'error' });
       }
     } finally {
       setIsLoading(false);
     }
-  }, [input, language]);
+  }, [input]);
 
   const saveToPersonalization = useCallback(async () => {
     if (!userId || !input.trim()) {
@@ -426,7 +432,7 @@ export default function KeyboardPage() {
 
   return (
     <div className="w-full max-w-6xl mx-auto py-4 px-4">
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-6 backdrop-blur-md bg-white/10 rounded-2xl shadow-2xl p-6 border border-white/20">
         
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-2">
@@ -437,10 +443,10 @@ export default function KeyboardPage() {
                   setLanguage(lang as keyof typeof layouts)
                   setLayoutName('default')
                 }}
-                className={`px-4 py-2 rounded border-2 border-white text-sm font-medium transition-all ${
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-lg active:scale-95 ${
                   language === lang 
-                    ? 'bg-white text-black' 
-                    : 'bg-black text-white hover:bg-white hover:text-black'
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white border-2 border-cyan-400/50 shadow-cyan-500/50' 
+                    : 'bg-white/10 text-white border-2 border-white/30 hover:bg-white/20 hover:border-white/50 hover:shadow-white/20'
                 }`}
               >
                 {lang.charAt(0).toUpperCase() + lang.slice(1)}
@@ -450,15 +456,15 @@ export default function KeyboardPage() {
 
           <button
             onClick={() => setShowSettings(!showSettings)}
-            className="px-3 py-2 rounded border-2 border-white bg-black text-white text-sm hover:bg-white hover:text-black transition-all"
+            className="px-4 py-2 rounded-lg bg-white/10 text-white border-2 border-white/30 text-sm hover:bg-white/20 hover:border-white/50 transition-all shadow-lg active:scale-95"
           >
-            Settings
+            ⚙️ Settings
           </button>
         </div>
 
         {showSettings && (
-          <div className="p-4 rounded border-2 border-white bg-black space-y-3">
-            <h3 className="text-lg font-bold">Settings</h3>
+          <div className="p-6 rounded-xl bg-white/5 backdrop-blur-md border border-white/20 space-y-4 shadow-xl">
+            <h3 className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">Settings</h3>
             
             <div>
               <label className="block text-sm font-medium mb-2">User ID (for personalization)</label>
@@ -471,7 +477,7 @@ export default function KeyboardPage() {
                     setIsLoggedIn(false);
                   }}
                   placeholder="Enter your user ID..."
-                  className="flex-1 px-3 py-2 rounded border-2 border-white bg-black text-white placeholder-gray-500 focus:outline-none focus:border-gray-400"
+                  className="flex-1 px-4 py-2 rounded-lg bg-white/10 border-2 border-white/30 text-white placeholder-gray-400 focus:outline-none focus:border-cyan-400 focus:bg-white/15 transition-all"
                 />
                 <button
                   onClick={handleLogin}

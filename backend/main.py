@@ -104,13 +104,18 @@ async def learn_from_user(user_id: str = Query(...), text: str = Query(...)):
     user_model = personalization_manager.get_user(user_id)
     user_model.learn(text)
     
-    # Also add custom words to Trie so they appear in autocomplete
+    # Only add custom words to Trie if they're likely real words (3+ chars and not similar to existing words)
     words = text.lower().split()
     for word in words:
-        if len(word) >= 2:  # Only add words with 2+ characters
+        if len(word) >= 3:  # Only add words with 3+ characters to avoid typos
             if not trie.search(word):  # Only if not already in Trie
-                trie.insert(word, frequency=1)
-                print(f"Added custom word to Trie: {word}")
+                # Check if word might be a typo by seeing if there are close matches
+                suggestions = trie.spell_check(word, max_distance=1, max_results=1)
+                if not suggestions:  # No close matches, likely a unique custom word
+                    trie.insert(word, frequency=1)
+                    print(f"Added custom word to Trie: {word}")
+                else:
+                    print(f"Skipped adding '{word}' - might be typo of '{suggestions[0]}'")
     
     # Persist immediately for project simplicity and predictable behavior
     user_model.save_to_file()
@@ -128,9 +133,31 @@ async def delete_user_data(user_id: str):
     return {"status": "success", "message": f"Deleted all data for user {user_id}"}
 
 @app.get("/spell-check/")
-async def spell_check_word(word: str = Query(...), max_distance: int = Query(2)):
-    corrections = trie.spell_check(word, max_distance=max_distance)
-    return {"word": word, "corrections": corrections, "found": len(corrections) > 0}
+async def spell_check_word(word: str = Query(...), max_distance: int = Query(2), language: str = Query(None)):
+    word_lower = word.lower()
+    
+    # First check if the word exists in the Trie (correctly spelled)
+    word_exists = trie.search(word_lower)
+    
+    # Get spelling suggestions
+    corrections = trie.spell_check(word_lower, max_distance=max_distance)
+    
+    # If word exists in dictionary, it's correct - don't show it as an error
+    if word_exists:
+        return {
+            "word": word,
+            "corrections": [],  # No corrections needed for correct words
+            "found": True,
+            "correct": True
+        }
+    
+    # Word doesn't exist - return corrections
+    return {
+        "word": word,
+        "corrections": corrections,
+        "found": len(corrections) > 0,
+        "correct": False
+    }
 
 @app.get("/word-analytics/")
 async def get_word_importance(word: str = Query(...)):
