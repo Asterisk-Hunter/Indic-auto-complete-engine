@@ -3,22 +3,15 @@ import json
 import os
 
 class UserModel:
-    
-    
     def __init__(self, user_id: str):
         self.user_id = user_id
-        
         self.personal_vocab = Counter()
-        
         self.personal_bigrams = defaultdict(lambda: defaultdict(int))
-        
         self.recent_words = []
         self.max_recent = 50
-        
         self.total_interactions = 0
     
     def learn(self, text: str):
-        
         if not text or not text.strip():
             return
         
@@ -39,14 +32,12 @@ class UserModel:
         self.total_interactions += 1
     
     def get_personalized_suggestions(self, base_suggestions: list, boost_factor: float = 2.0) -> list:
-        
         if not base_suggestions:
             return base_suggestions
         
         scored = []
         for word in base_suggestions:
             word_lower = word.lower()
-            
             frequency_score = self.personal_vocab.get(word_lower, 0)
             
             recency_score = 0
@@ -58,11 +49,9 @@ class UserModel:
             scored.append((word, total_score))
         
         scored.sort(key=lambda x: -x[1])
-        
         return [word for word, score in scored]
     
     def predict_next_word(self, prev_word: str, top_k: int = 5) -> list:
-        
         prev_word_lower = prev_word.lower()
         
         if prev_word_lower not in self.personal_bigrams:
@@ -70,29 +59,22 @@ class UserModel:
         
         next_words = self.personal_bigrams[prev_word_lower]
         counter = Counter(next_words)
-        
         return [w for w, _ in counter.most_common(top_k)]
     
     def get_favorite_words(self, top_k: int = 10) -> list:
-        
-        # Return list of (word, count) pairs for top-k most common words
         return self.personal_vocab.most_common(top_k)
     
     def get_stats(self) -> dict:
-        
         return {
             'user_id': self.user_id,
             'total_interactions': self.total_interactions,
             'unique_words': len(self.personal_vocab),
             'total_words': sum(self.personal_vocab.values()),
-            # favorite_words as list of [word, count] to match frontend expectations
             'favorite_words': self.get_favorite_words(5)
         }
     
     def save_to_file(self, directory: str = 'user_data'):
-        
         os.makedirs(directory, exist_ok=True)
-        
         filepath = os.path.join(directory, f'{self.user_id}.json')
         
         bigrams_dict = {
@@ -115,7 +97,6 @@ class UserModel:
             print(f"Error saving user model: {e}")
     
     def load_from_file(self, directory: str = 'user_data'):
-        
         filepath = os.path.join(directory, f'{self.user_id}.json')
         
         try:
@@ -143,7 +124,6 @@ class UserModel:
             return False
     
     def clear_history(self):
-        
         self.personal_vocab.clear()
         self.personal_bigrams.clear()
         self.recent_words.clear()
@@ -151,40 +131,29 @@ class UserModel:
 
 
 class PersonalizationManager:
-    
-    
     def __init__(self, storage_dir: str = 'user_data'):
         self.users = {}
-        
         self.storage_dir = storage_dir
-        
         os.makedirs(storage_dir, exist_ok=True)
     
     def get_user(self, user_id: str) -> UserModel:
-        
         if user_id in self.users:
             return self.users[user_id]
         
         user_model = UserModel(user_id)
-        
         user_model.load_from_file(self.storage_dir)
-        
         self.users[user_id] = user_model
-        
         return user_model
     
     def save_user(self, user_id: str):
-        
         if user_id in self.users:
             self.users[user_id].save_to_file(self.storage_dir)
     
     def save_all_users(self):
-        
         for user_id, user_model in self.users.items():
             user_model.save_to_file(self.storage_dir)
     
     def delete_user(self, user_id: str):
-        
         if user_id in self.users:
             del self.users[user_id]
         
@@ -197,7 +166,6 @@ class PersonalizationManager:
             print(f"Error deleting user data: {e}")
     
     def get_all_user_ids(self) -> list:
-        
         try:
             files = os.listdir(self.storage_dir)
             user_ids = [f[:-5] for f in files if f.endswith('.json')]

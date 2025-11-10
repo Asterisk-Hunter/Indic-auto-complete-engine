@@ -21,12 +21,9 @@ class ContentFilter:
             return False
         word_lower = word.lower()
         
-        # Check exact match first
         if word_lower in self.blocklist:
             return True
         
-        # Check if any blocked word is a substring of the input word
-        # This catches variations like "fucked", "fucker", etc.
         for blocked_word in self.blocklist:
             if blocked_word in word_lower:
                 return True

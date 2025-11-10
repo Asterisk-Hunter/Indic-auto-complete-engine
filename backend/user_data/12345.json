@@ -1,11 +1,15 @@
 {
   "user_id": "12345",
   "personal_vocab": {
-    "pootyh": 1
+    "pootyh": 1,
+    "lol": 1,
+    "bol": 1
   },
   "personal_bigrams": {},
   "recent_words": [
+    "bol",
+    "lol",
     "pootyh"
   ],
-  "total_interactions": 1
+  "total_interactions": 3
 }

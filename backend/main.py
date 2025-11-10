@@ -43,7 +43,6 @@ async def startup_event():
         file_path = os.path.join(base_dir, path)
         if os.path.exists(file_path):
             n_gram.load_from_file(file_path)
-    # Phrase dataset deprecated; loading skipped.
     content_filter.load_blocklist()
     for language, path in DATASET_PATHS.items():
         file_path = os.path.join(base_dir, path)
@@ -108,11 +107,8 @@ async def learn_from_user(user_id: str = Query(...), text: str = Query(...)):
         words = text.lower().split()
         for word in words:
             if len(word) >= 3:
-                if not trie.search(word):
-                    trie.insert(word, freq=1)
-                    print(f"Added custom word to Trie: {word}")
+                trie.insert(word, freq=1000)
         
-        cached_autocomplete.cache_clear()
         user_model.save_to_file()
         return {"status": "success", "user_id": user_id, "stats": user_model.get_stats()}
     except Exception as e:
@@ -135,23 +131,17 @@ async def delete_user_data(user_id: str):
 @app.get("/spell-check/")
 async def spell_check_word(word: str = Query(...), max_distance: int = Query(2), language: str = Query(None)):
     word_lower = word.lower()
-    
-    # First check if the word exists in the Trie (correctly spelled)
     word_exists = trie.search(word_lower)
-    
-    # Get spelling suggestions
     corrections = trie.spell_check(word_lower, max_distance=max_distance)
     
-    # If word exists in dictionary, it's correct - don't show it as an error
     if word_exists:
         return {
             "word": word,
-            "corrections": [],  # No corrections needed for correct words
+            "corrections": [],
             "found": True,
             "correct": True
         }
     
-    # Word doesn't exist - return corrections
     return {
         "word": word,
         "corrections": corrections,

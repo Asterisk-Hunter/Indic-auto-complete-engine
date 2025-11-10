@@ -44,7 +44,6 @@ def _find_node(prefix: str):
     return node
 
 def search(word: str) -> bool:
-    """Check if a word exists in the Trie"""
     word = _normalize(word)
     node = _find_node(word)
     return node is not None and node.is_word
@@ -117,51 +116,42 @@ def levenshtein_distance(s1: str, s2: str) -> int:
 
 
 def spell_check(word: str, max_distance: int = 2, max_results: int = 10) -> list:
-    """Fast spell check using BFS with early termination"""
     word = _normalize(word)
     if not word:
         return []
     
-    # Only check if it's a reasonable word length
     if len(word) < 2:
         return []
     
     candidates = []
     word_len = len(word)
     
-    # Much stricter length filter for speed
     min_len = word_len - max_distance
     max_len = word_len + max_distance
     
-    # BFS with depth limit
     queue = [(root, '', 0)]
     checked = 0
-    max_checks = 5000  # Stop after checking 5000 words for speed
+    max_checks = 5000
     
     while queue and checked < max_checks and len(candidates) < max_results * 3:
         node, prefix, depth = queue.pop(0)
         
-        # Skip if too long
         if depth > max_len:
             continue
         
-        # Check if it's a word and within length range
         if node.is_word and min_len <= len(prefix) <= max_len:
             distance = levenshtein_distance(word, prefix)
             if distance <= max_distance:
                 candidates.append((prefix, distance, node.frequency))
                 checked += 1
                 
-                # Early exit if we have enough good matches
                 if len(candidates) >= max_results * 2 and distance <= 1:
                     break
         
-        # Only expand if we haven't gone too deep
         if depth < max_len:
             for char, child in node.children.items():
                 queue.append((child, prefix + char, depth + 1))
     
-    # Sort by distance first, then by frequency
     candidates.sort(key=lambda x: (x[1], -x[2]))
     
     return [w for w, _, _ in candidates[:max_results]]

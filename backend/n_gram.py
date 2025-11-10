@@ -18,7 +18,6 @@ class Trie:
         node.is_end = True
 
     def autocomplete(self, prefix: str, limit: int = 5):
-        
         results = []
         node = self.root
 
@@ -63,7 +62,6 @@ class NGramModel:
         self.total_pairs = count
 
     def predict_next_word(self, prev_word: str, top_k: int = 5):
-        
         if prev_word not in self.model:
             return []
         next_words = self.model[prev_word]
@@ -71,21 +69,15 @@ class NGramModel:
         return [w for w, _ in counter.most_common(top_k)]
 
     def predict_prefix(self, prefix: str, top_k: int = 5):
-        
         return self.trie.autocomplete(prefix, limit=top_k)
-
-    # Trigram support removed from the model.
-    
     
     def hybrid_predict(self, user_input: str, top_k: int = 5):
-        
         words = user_input.strip().split()
         if not words:
             return []
 
         if len(words) == 1:
             prefix = words[0]
-            
             preds = self.predict_next_word(prefix, top_k)
             if preds:
                 return preds
@@ -95,7 +87,6 @@ class NGramModel:
         if len(words) >= 2:
             word1 = words[-2]
             word2 = words[-1]
-            # Trigram lookup removed — fall through to bigram/prefix predictors.
         
         prev_word = words[-2] if len(words) >= 2 else words[-1]
         prefix = words[-1]
@@ -105,25 +96,18 @@ class NGramModel:
 
         combined = list(dict.fromkeys(next_candidates + prefix_candidates))
         return combined[:top_k]
-    
-    # Trigram loader removed — trigram feature deprecated.
-    
-    # Phrase-related loader removed; feature deprecated.
+
 
 ngram = NGramModel()
 
 def load_from_file(path: str):
-    
     ngram.load_from_file(path)
+
 def predict_next_word(prev_word: str, top_k: int = 5):
-    
     return ngram.predict_next_word(prev_word, top_k)
 
 def predict_prefix(prefix: str, top_k: int = 5):
-    
     return ngram.predict_prefix(prefix, top_k)
 
-# Trigram wrappers removed — feature deprecated.
 def hybrid_predict(user_input: str, top_k: int = 5):
-    
     return ngram.hybrid_predict(user_input, top_k)

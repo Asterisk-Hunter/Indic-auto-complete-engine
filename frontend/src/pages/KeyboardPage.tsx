@@ -115,7 +115,7 @@ export default function KeyboardPage() {
       setIsLoading(true);
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+        const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT * 2);
 
         const userParam = userId && isLoggedIn ? `&user_id=${encodeURIComponent(userId)}` : '';
         const filterParam = `&filter_content=${filterContent}`;
@@ -212,7 +212,7 @@ export default function KeyboardPage() {
     
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT * 2); // Double timeout for spell check
+      const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT * 2);
 
       const results = await Promise.all(
         words.map(async (word) => {
@@ -222,7 +222,6 @@ export default function KeyboardPage() {
               { signal: controller.signal }
             );
             const data = await response.json();
-            // Only return as error if word is incorrect (not found in dictionary)
             if (data.correct === false && data.corrections && data.corrections.length > 0) {
               return { word, corrections: data.corrections };
             }
@@ -234,7 +233,6 @@ export default function KeyboardPage() {
       );
       
       clearTimeout(timeoutId);
-      // Filter out null values (correctly spelled words)
       const errors = results.filter(r => r !== null);
       setSpellErrors(errors);
       
@@ -265,7 +263,6 @@ export default function KeyboardPage() {
       return;
     }
 
-    // Save only the currently typed (last) word to personalization
     const words = input.trim().split(/\s+/).filter(word => word.length > 0);
     const lastWord = words.length > 0 ? words[words.length - 1] : '';
 
@@ -277,7 +274,7 @@ export default function KeyboardPage() {
     setIsLoading(true);
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+      const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT * 3);
 
       const response = await fetch(
         `${API_BASE}/learn/?user_id=${encodeURIComponent(userId)}&text=${encodeURIComponent(lastWord)}`,
@@ -287,7 +284,6 @@ export default function KeyboardPage() {
       clearTimeout(timeoutId);
 
       if (response.ok) {
-        // Parse returned stats and update dictionary display immediately
         const data = await response.json();
         const stats = data.stats || data.statistics || null;
         if (stats) {
