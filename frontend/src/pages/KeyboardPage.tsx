@@ -88,6 +88,13 @@ export default function KeyboardPage() {
     }
   }, [userId]);
 
+  const handleLogout = useCallback(() => {
+    setIsLoggedIn(false);
+    setUserId('');
+    localStorage.removeItem('autocomplete_user_id');
+    setToast({ message: 'Logged out successfully', type: 'success' });
+  }, []);
+
   useEffect(() => {
     const fetchSuggestions = async () => {
       if (!input.trim()) {
@@ -116,10 +123,10 @@ export default function KeyboardPage() {
         let response;
         let apiUrl;
         if (hasSpace) {
-          apiUrl = `${API_BASE}/predict/${language}/?user_input=${encodeURIComponent(input.trim())}${userParam}${filterParam}`;
+          apiUrl = `${API_BASE}/predict/${language}/?user_input=${encodeURIComponent(input.trim().toLowerCase())}${userParam}${filterParam}`;
           response = await fetch(apiUrl, { signal: controller.signal });
         } else {
-          apiUrl = `${API_BASE}/autocomplete/${language}/?prefix=${encodeURIComponent(lastWord)}${userParam}${filterParam}`;
+          apiUrl = `${API_BASE}/autocomplete/${language}/?prefix=${encodeURIComponent(lastWord.toLowerCase())}${userParam}${filterParam}`;
           response = await fetch(apiUrl, { signal: controller.signal });
         }
         
@@ -477,19 +484,25 @@ export default function KeyboardPage() {
                     setIsLoggedIn(false);
                   }}
                   placeholder="Enter your user ID..."
-                  className="flex-1 px-4 py-2 rounded-lg bg-white/10 border-2 border-white/30 text-white placeholder-gray-400 focus:outline-none focus:border-cyan-400 focus:bg-white/15 transition-all"
+                  disabled={isLoggedIn}
+                  className="flex-1 px-4 py-2 rounded-lg bg-white/10 border-2 border-white/30 text-white placeholder-gray-400 focus:outline-none focus:border-cyan-400 focus:bg-white/15 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 />
-                <button
-                  onClick={handleLogin}
-                  disabled={isLoading || !userId.trim()}
-                  className={`px-4 py-2 rounded border-2 border-white text-sm font-medium transition-all ${
-                    isLoggedIn 
-                      ? 'bg-white text-black' 
-                      : 'bg-black text-white hover:bg-white hover:text-black'
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
-                >
-                  {isLoading ? 'Loading...' : isLoggedIn ? 'Logged In' : 'Login'}
-                </button>
+                {!isLoggedIn ? (
+                  <button
+                    onClick={handleLogin}
+                    disabled={isLoading || !userId.trim()}
+                    className="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-medium shadow-lg shadow-cyan-500/50 hover:shadow-cyan-500/70 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+                  >
+                    {isLoading ? 'Loading...' : 'Login'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleLogout}
+                    className="px-4 py-2 rounded-lg bg-gradient-to-r from-red-500 to-pink-500 text-white font-medium shadow-lg shadow-red-500/50 hover:shadow-red-500/70 active:scale-95 transition-all"
+                  >
+                    Logout
+                  </button>
+                )}
               </div>
             </div>
 

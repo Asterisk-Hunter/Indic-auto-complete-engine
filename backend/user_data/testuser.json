@@ -1,0 +1,11 @@
+{
+  "user_id": "testuser",
+  "personal_vocab": {
+    "myword": 1
+  },
+  "personal_bigrams": {},
+  "recent_words": [
+    "myword"
+  ],
+  "total_interactions": 1
+}

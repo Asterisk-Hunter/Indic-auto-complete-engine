@@ -101,25 +101,25 @@ async def suggest_emoji(word: str = Query(...), top_k: int = Query(3)):
 
 @app.post("/learn/")
 async def learn_from_user(user_id: str = Query(...), text: str = Query(...)):
-    user_model = personalization_manager.get_user(user_id)
-    user_model.learn(text)
-    
-    # Only add custom words to Trie if they're likely real words (3+ chars and not similar to existing words)
-    words = text.lower().split()
-    for word in words:
-        if len(word) >= 3:  # Only add words with 3+ characters to avoid typos
-            if not trie.search(word):  # Only if not already in Trie
-                # Check if word might be a typo by seeing if there are close matches
-                suggestions = trie.spell_check(word, max_distance=1, max_results=1)
-                if not suggestions:  # No close matches, likely a unique custom word
-                    trie.insert(word, frequency=1)
+    try:
+        user_model = personalization_manager.get_user(user_id)
+        user_model.learn(text)
+        
+        words = text.lower().split()
+        for word in words:
+            if len(word) >= 3:
+                if not trie.search(word):
+                    trie.insert(word, freq=1)
                     print(f"Added custom word to Trie: {word}")
-                else:
-                    print(f"Skipped adding '{word}' - might be typo of '{suggestions[0]}'")
-    
-    # Persist immediately for project simplicity and predictable behavior
-    user_model.save_to_file()
-    return {"status": "success", "user_id": user_id, "stats": user_model.get_stats()}
+        
+        cached_autocomplete.cache_clear()
+        user_model.save_to_file()
+        return {"status": "success", "user_id": user_id, "stats": user_model.get_stats()}
+    except Exception as e:
+        print(f"Error in /learn/ endpoint: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
 
 @app.get("/user-stats/{user_id}")
 async def get_user_stats(user_id: str):
